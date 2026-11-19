@@ -1,0 +1,267 @@
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname T3-Router
+!
+!
+!
+!
+ip dhcp excluded-address 10.57.168.1 10.57.168.10
+ip dhcp excluded-address 10.57.160.1 10.57.160.10
+ip dhcp excluded-address 10.57.172.1 10.57.172.10
+!
+ip dhcp pool T3-Users
+ network 10.57.168.0 255.255.252.0
+ default-router 10.57.168.1
+ dns-server 10.57.174.10
+ domain-name terminal-3.rcomp-25-26-dd-g1
+ip dhcp pool T3-WiFi
+ network 10.57.160.0 255.255.248.0
+ default-router 10.57.160.1
+ dns-server 10.57.174.10
+ domain-name terminal-3.rcomp-25-26-dd-g1
+ip dhcp pool T3-VoIP
+ network 10.57.172.0 255.255.254.0
+ default-router 10.57.172.1
+ option 150 ip 10.57.172.1
+ dns-server 10.57.174.10
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+!
+license udi pid CISCO2811/K9 sn FTX10179SLX-
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ no ip address
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/0.1
+ encapsulation dot1Q 761
+ ip address 10.57.128.3 255.255.255.0
+ ip nat outside
+ ip access-group BACKBONE-IN in
+!
+interface FastEthernet0/0.2
+ encapsulation dot1Q 767
+ ip address 10.57.168.1 255.255.252.0
+ ip access-group USERS-IN in
+!
+interface FastEthernet0/0.3
+ encapsulation dot1Q 768
+ ip address 10.57.160.1 255.255.248.0
+ ip access-group WIFI-IN in
+!
+interface FastEthernet0/0.4
+ encapsulation dot1Q 769
+ ip address 10.57.172.1 255.255.254.0
+ ip access-group VOIP-IN in
+!
+interface FastEthernet0/0.5
+ encapsulation dot1Q 770
+ ip address 10.57.174.1 255.255.255.0
+ ip nat inside
+ ip access-group ROUTER-IN in
+ ip access-group DMZ-OUT out
+!
+interface FastEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ log-adjacency-changes
+ network 10.57.128.0 0.0.0.255 area 0
+ network 10.57.160.0 0.0.7.255 area 2
+ network 10.57.168.0 0.0.3.255 area 2
+ network 10.57.172.0 0.0.1.255 area 2
+ network 10.57.174.0 0.0.0.255 area 2
+!
+ip nat inside source static tcp 10.57.174.10 80 10.57.128.3 80 
+ip nat inside source static tcp 10.57.174.10 443 10.57.128.3 443 
+ip classless
+ip route 0.0.0.0 0.0.0.0 10.57.128.2 
+!
+ip flow-export version 9
+!
+!
+ip access-list extended DMZ-OUT
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit tcp any host 10.57.174.10 eq domain
+ permit udp any host 10.57.174.10 eq domain
+ permit tcp any host 10.57.174.10 eq www
+ permit tcp any host 10.57.174.10 eq 443
+ permit tcp any host 10.57.174.11 eq www
+ permit tcp any host 10.57.174.11 eq 443
+ deny ip any any
+ip access-list extended ROUTER-IN
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit ospf any any
+ permit udp any any eq bootps
+ permit udp any any eq bootpc
+ permit udp any host 10.57.172.1 eq tftp
+ permit tcp any host 10.57.172.1 eq 2000
+ permit tcp any host 10.57.128.3 eq www
+ permit tcp any host 10.57.128.3 eq 443
+ deny ip any any
+ip access-list extended VOIP-IN
+ deny ip any 10.57.168.0 0.0.3.255
+ deny ip any 10.57.160.0 0.0.7.255
+ deny ip any 10.57.174.0 0.0.0.255
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit udp any any eq bootps
+ permit udp any any eq bootpc
+ permit udp any host 10.57.172.1 eq tftp
+ permit tcp any host 10.57.172.1 eq 2000
+ deny ip any host 10.57.128.3
+ deny ip any host 10.57.160.1
+ deny ip any host 10.57.168.1
+ deny ip any host 10.57.172.1
+ deny ip any host 10.57.174.1
+ permit ip 10.57.172.0 0.0.1.255 any
+ deny ip any any
+ip access-list extended BACKBONE-IN
+ deny ip 10.57.160.0 0.0.7.255 any
+ deny ip 10.57.168.0 0.0.3.255 any
+ deny ip 10.57.172.0 0.0.1.255 any
+ deny ip 10.57.174.0 0.0.0.255 any
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit tcp any host 10.57.128.3 eq www
+ permit tcp any host 10.57.128.3 eq 443
+ permit ospf any any
+ deny ip any host 10.57.128.3
+ deny ip any host 10.57.160.1
+ deny ip any host 10.57.168.1
+ deny ip any host 10.57.172.1
+ deny ip any host 10.57.174.1
+ permit ip any any
+ip access-list extended USERS-IN
+ deny ip any 10.57.160.0 0.0.7.255
+ deny ip any 10.57.172.0 0.0.1.255
+ permit tcp any host 10.57.174.10 eq domain
+ permit udp any host 10.57.174.10 eq domain
+ permit tcp any host 10.57.174.10 eq www
+ permit tcp any host 10.57.174.10 eq 443
+ permit tcp any host 10.57.174.11 eq www
+ permit tcp any host 10.57.174.11 eq 443
+ deny ip any 10.57.174.0 0.0.0.255
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit udp any any eq bootps
+ permit udp any any eq bootpc
+ deny ip any host 10.57.128.3
+ deny ip any host 10.57.160.1
+ deny ip any host 10.57.168.1
+ deny ip any host 10.57.172.1
+ deny ip any host 10.57.174.1
+ permit ip 10.57.168.0 0.0.3.255 any
+ deny ip any any
+ip access-list extended WIFI-IN
+ deny ip any 10.57.168.0 0.0.3.255
+ deny ip any 10.57.172.0 0.0.1.255
+ permit tcp any host 10.57.174.10 eq domain
+ permit udp any host 10.57.174.10 eq domain
+ permit tcp any host 10.57.174.10 eq www
+ permit tcp any host 10.57.174.10 eq 443
+ permit tcp any host 10.57.174.11 eq www
+ permit tcp any host 10.57.174.11 eq 443
+ deny ip any 10.57.174.0 0.0.0.255
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit udp any any eq bootps
+ permit udp any any eq bootpc
+ deny ip any host 10.57.128.3
+ deny ip any host 10.57.160.1
+ deny ip any host 10.57.168.1
+ deny ip any host 10.57.172.1
+ deny ip any host 10.57.174.1
+ permit ip 10.57.160.0 0.0.7.255 any
+ deny ip any any
+!
+!
+!
+!
+!
+dial-peer voice 2 voip
+ destination-pattern 2...
+ session target ipv4:10.57.128.2
+!
+dial-peer voice 4 voip
+ destination-pattern 4...
+ session target ipv4:10.57.128.4
+!
+dial-peer voice 5 voip
+ destination-pattern 5...
+ session target ipv4:10.57.128.5
+!
+telephony-service
+ max-ephones 2
+ max-dn 2
+ ip source-address 10.57.172.1 port 2000
+ auto assign 1 to 2
+!
+ephone-dn 1
+ number 3000
+!
+ephone-dn 2
+ number 3001
+!
+ephone 1
+ device-security-mode none
+ mac-address 0001.4272.4E08
+ type 7960
+ button 1:1
+!
+ephone 2
+ device-security-mode none
+ mac-address 00D0.5832.5012
+ type 7960
+ button 1:2
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
+

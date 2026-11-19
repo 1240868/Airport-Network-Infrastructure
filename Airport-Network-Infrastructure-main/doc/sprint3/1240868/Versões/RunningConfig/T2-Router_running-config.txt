@@ -1,0 +1,238 @@
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname T2-Router
+!
+!
+!
+!
+ip dhcp excluded-address 10.57.158.1 10.57.158.30
+ip dhcp excluded-address 10.57.128.1 10.57.128.5
+ip dhcp excluded-address 10.57.156.1 10.57.156.10
+!
+ip dhcp pool T2-users-pool
+ network 10.57.152.0 255.255.252.0
+ default-router 10.57.152.1
+ dns-server 10.57.158.10
+ domain-name rcomp-25-26-dd-g1
+ip dhcp pool T2-wifi-pool
+ network 10.57.144.0 255.255.248.0
+ default-router 10.57.144.1
+ dns-server 10.57.158.10
+ domain-name rcomp-25-26-dd-g1
+ip dhcp pool T2-voip-pool
+ network 10.57.156.0 255.255.254.0
+ default-router 10.57.156.1
+ option 150 ip 10.57.128.2
+ dns-server 10.57.158.10
+ domain-name rcomp-25-26-dd-g1
+!
+!
+!
+no ip cef
+no ipv6 cef
+!
+!
+!
+!
+license udi pid CISCO2811/K9 sn FTX10170IPM-
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ no ip address
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/0.1
+ encapsulation dot1Q 761
+ ip address 10.57.128.2 255.255.255.0
+ ip nat outside
+ ip access-group ACL-BACKBONE-IN in
+!
+interface FastEthernet0/0.2
+ encapsulation dot1Q 763
+ ip address 10.57.152.1 255.255.252.0
+ ip nat inside
+ ip access-group ACL-INTERNAL-IN in
+!
+interface FastEthernet0/0.3
+ encapsulation dot1Q 764
+ ip address 10.57.144.1 255.255.248.0
+ ip nat inside
+ ip access-group ACL-INTERNAL-IN in
+!
+interface FastEthernet0/0.4
+ encapsulation dot1Q 765
+ ip address 10.57.156.1 255.255.254.0
+ ip nat inside
+ ip access-group ACL-INTERNAL-IN in
+!
+interface FastEthernet0/0.5
+ encapsulation dot1Q 766
+ ip address 10.57.158.1 255.255.255.128
+ ip nat inside
+ ip access-group ACL-DMZ-IN in
+!
+interface FastEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface FastEthernet1/0
+ ip address 89.73.67.85 255.255.255.252
+ ip nat outside
+ duplex auto
+ speed auto
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+router ospf 1
+ router-id 2.2.2.2
+ log-adjacency-changes
+ network 10.57.128.0 0.0.0.255 area 0
+ network 10.57.152.0 0.0.3.255 area 1
+ network 10.57.144.0 0.0.7.255 area 1
+ network 10.57.156.0 0.0.1.255 area 1
+ network 10.57.158.0 0.0.0.127 area 1
+ default-information originate
+!
+ip nat inside source static tcp 10.57.158.10 80 10.57.128.2 80 
+ip nat inside source static tcp 10.57.158.10 443 10.57.128.2 443 
+ip classless
+ip route 0.0.0.0 0.0.0.0 89.73.67.86 
+!
+ip flow-export version 9
+!
+!
+ip access-list extended ACL-DMZ-IN
+ permit icmp any any echo
+ permit ospf any any
+ permit icmp any any echo-reply
+ permit udp host 10.57.158.10 any eq domain
+ permit tcp host 10.57.158.10 any eq domain
+ permit udp host 10.57.158.10 host 10.57.158.1 eq domain
+ deny ip any host 10.57.158.1
+ deny ip any host 10.57.152.1
+ deny ip any host 10.57.144.1
+ deny ip any host 10.57.156.1
+ deny ip any host 10.57.128.2
+ deny ip any host 89.73.67.85
+ permit ip any any
+ip access-list extended ACL-INTERNAL-IN
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit ospf any any
+ permit udp any host 10.57.152.1 eq bootps
+ permit udp any host 10.57.144.1 eq bootps
+ permit udp any host 10.57.156.1 eq bootps
+ permit udp any host 10.57.128.2 eq tftp
+ permit tcp any host 10.57.128.2 eq 2000
+ permit udp any host 10.57.158.10 eq domain
+ permit tcp any host 10.57.158.10 eq domain
+ permit tcp any host 10.57.158.10 eq www
+ permit tcp any host 10.57.158.10 eq 443
+ permit tcp any host 10.57.158.20 eq www
+ permit tcp any host 10.57.158.20 eq 443
+ deny ip any 10.57.158.0 0.0.0.127
+ deny ip any host 10.57.158.1
+ deny ip any host 10.57.152.1
+ deny ip any host 10.57.144.1
+ deny ip any host 10.57.156.1
+ deny ip any host 10.57.128.2
+ deny ip any host 89.73.67.85
+ permit ip any any
+ip access-list extended ACL-BACKBONE-IN
+ deny ip 10.57.144.0 0.0.15.255 any
+ deny ip 10.57.152.0 0.0.3.255 any
+ deny ip 10.57.156.0 0.0.1.255 any
+ deny ip 10.57.158.0 0.0.0.127 any
+ permit icmp any any echo
+ permit icmp any any echo-reply
+ permit ospf any any
+ permit udp any host 10.57.128.2 eq bootps
+ permit tcp any host 10.57.128.2 eq www
+ permit tcp any host 10.57.128.2 eq 443
+ permit tcp any host 10.57.128.2 eq 2000
+ deny ip any host 10.57.128.2
+ deny ip any host 10.57.158.1
+ deny ip any host 10.57.152.1
+ deny ip any host 10.57.144.1
+ deny ip any host 10.57.156.1
+ deny ip any host 89.73.67.85
+ permit ip any any
+!
+!
+!
+!
+!
+dial-peer voice 3 voip
+ destination-pattern 3...
+ session target ipv4:10.57.128.3
+!
+dial-peer voice 4 voip
+ destination-pattern 4...
+ session target ipv4:10.57.128.4
+!
+dial-peer voice 5 voip
+ destination-pattern 5...
+ session target ipv4:10.57.128.5
+!
+telephony-service
+ max-ephones 10
+ max-dn 10
+ ip source-address 10.57.156.1 port 2000
+ auto assign 1 to 2
+!
+ephone-dn 1
+ number 2000
+!
+ephone-dn 2
+ number 2001
+!
+ephone 3
+ device-security-mode none
+ mac-address 0004.9AE0.90D7
+ type 7960
+ button 1:1
+!
+ephone 4
+ device-security-mode none
+ mac-address 0090.2BAD.543D
+ type 7960
+ button 1:2
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
+

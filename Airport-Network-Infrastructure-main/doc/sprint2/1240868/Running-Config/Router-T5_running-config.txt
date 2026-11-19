@@ -1,0 +1,103 @@
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname T5-Router
+!
+!
+!
+!
+!
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+!
+license udi pid CISCO2811/K9 sn FTX1017QQQL-
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ no ip address
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/0.1
+ no ip address
+!
+interface FastEthernet0/0.761
+ encapsulation dot1Q 761
+ ip address 10.57.128.5 255.255.255.0
+!
+interface FastEthernet0/0.771
+ encapsulation dot1Q 771
+ ip address 10.57.192.1 255.255.240.0
+!
+interface FastEthernet0/0.772
+ encapsulation dot1Q 772
+ ip address 10.57.208.1 255.255.248.0
+!
+interface FastEthernet0/0.773
+ encapsulation dot1Q 773
+ ip address 10.57.216.1 255.255.252.0
+!
+interface FastEthernet0/0.774
+ encapsulation dot1Q 774
+ ip address 10.57.220.1 255.255.254.0
+!
+interface FastEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface Vlan1
+ no ip address
+ shutdown
+!
+ip classless
+ip route 10.57.144.0 255.255.240.0 10.57.128.2 
+ip route 0.0.0.0 0.0.0.0 10.57.128.2 
+!
+ip flow-export version 9
+!
+!
+!
+!
+!
+!
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
+

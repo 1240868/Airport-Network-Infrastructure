@@ -1,0 +1,221 @@
+from PIL import Image, ImageDraw, ImageFont
+import math
+
+def create_technical_plan(sala_name, area_m2, tomadas, postos, filename, nivel="", largura_m=None, comp_m=None):
+    W, H = 1400, 1200
+    img = Image.new("RGB", (W, H), "#FFFFFF")
+    draw = ImageDraw.Draw(img)
+
+    margin_left = 160
+    margin_top = 120
+    margin_right = 160
+    margin_bottom = 160
+    room_x1 = margin_left
+    room_y1 = margin_top
+    room_x2 = W - margin_right
+    room_y2 = H - margin_bottom
+
+    wall_thickness = 18
+    wall_color = "#5C1A1A"
+    outlet_color = "#7B2222"
+    dim_color = "#7B2222"
+    label_color = "#3A0A0A"
+    fill_wall = "#D6B8B8"
+    room_fill = "#F5F0F0"
+    grid_color = "#E8DADA"
+
+    draw.rectangle([room_x1, room_y1, room_x2, room_y2], fill=room_fill)
+
+    grid_spacing = 60
+    for gx in range(room_x1, room_x2, grid_spacing):
+        draw.line([(gx, room_y1), (gx, room_y2)], fill=grid_color, width=1)
+    for gy in range(room_y1, room_y2, grid_spacing):
+        draw.line([(room_x1, gy), (room_x2, gy)], fill=grid_color, width=1)
+
+    draw.rectangle([room_x1, room_y1, room_x2, room_y2], outline=wall_color, width=wall_thickness)
+    draw.rectangle(
+        [room_x1 + wall_thickness//2, room_y1 + wall_thickness//2,
+         room_x2 - wall_thickness//2, room_y2 - wall_thickness//2],
+        outline=fill_wall, width=4
+    )
+
+    try:
+        font_small  = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+        font_label  = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+        font_bold   = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 22)
+        font_title  = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+        font_dim    = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 19)
+        font_tiny   = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+    except:
+        font_small = font_label = font_bold = font_title = font_dim = font_tiny = ImageFont.load_default()
+
+    def draw_outlet_symbol(cx, cy, size=20):
+        s = size
+        draw.rectangle([cx-s, cy-s, cx+s, cy+s], outline=outlet_color, width=2, fill="#FAF0F0")
+        ic = int(s * 0.55)
+        draw.ellipse([cx-ic, cy-ic, cx+ic, cy+ic], outline=outlet_color, width=2)
+        ph = int(s * 0.18)
+        px_off = int(s * 0.22)
+        py_off = int(s * 0.12)
+        draw.ellipse([cx-px_off-ph, cy-py_off-ph, cx-px_off+ph, cy-py_off+ph], fill=outlet_color)
+        draw.ellipse([cx+px_off-ph, cy-py_off-ph, cx+px_off+ph, cy-py_off+ph], fill=outlet_color)
+        draw.ellipse([cx-ph, cy+py_off+ph//2-ph, cx+ph, cy+py_off+ph//2+ph], fill=outlet_color)
+
+    def draw_leader(x1, y1, x2, y2, text_lines, side="left"):
+        draw.line([(x1, y1), (x2, y2)], fill=dim_color, width=2)
+        draw.ellipse([x1-4, y1-4, x1+4, y1+4], fill=dim_color)
+        tx = x2 - 10 if side == "left" else x2 + 10
+        ty = y2 - 12 * len(text_lines) // 2
+        for i, line in enumerate(text_lines):
+            anchor = "ra" if side == "left" else "la"
+            draw.text((tx, ty + i * 22), line, font=font_label, fill=label_color, anchor=anchor)
+
+    def draw_dimension_h(x1, x2, y_ref, text, offset=50):
+        y = y_ref - offset
+        draw.line([(x1, y), (x2, y)], fill=dim_color, width=2)
+        draw.line([(x1, y-8), (x1, y+8)], fill=dim_color, width=2)
+        draw.line([(x2, y-8), (x2, y+8)], fill=dim_color, width=2)
+        draw.polygon([(x1, y), (x1+10, y-5), (x1+10, y+5)], fill=dim_color)
+        draw.polygon([(x2, y), (x2-10, y-5), (x2-10, y+5)], fill=dim_color)
+        mid = (x1 + x2) // 2
+        draw.text((mid, y - 24), text, font=font_dim, fill=dim_color, anchor="mm")
+
+    def draw_dimension_v(y1, y2, x_ref, text, offset=50):
+        x = x_ref + offset
+        draw.line([(x, y1), (x, y2)], fill=dim_color, width=2)
+        draw.line([(x-8, y1), (x+8, y1)], fill=dim_color, width=2)
+        draw.line([(x-8, y2), (x+8, y2)], fill=dim_color, width=2)
+        draw.polygon([(x, y1), (x-5, y1+10), (x+5, y1+10)], fill=dim_color)
+        draw.polygon([(x, y2), (x-5, y2-10), (x+5, y2-10)], fill=dim_color)
+        mid = (y1 + y2) // 2
+        draw.text((x + 28, mid), text, font=font_dim, fill=dim_color, anchor="mm")
+
+    pad_x = 70
+    pad_y = 70
+
+    if postos <= 24:
+        num_rows = 4
+    elif postos <= 40:
+        num_rows = 5
+    elif postos <= 60:
+        num_rows = 6
+    elif postos <= 90:
+        num_rows = 7
+    else:
+        num_rows = 8
+
+    base = postos // num_rows
+    extra = postos % num_rows
+    row_counts = sorted([base + (1 if i < extra else 0) for i in range(num_rows)])
+    max_cols = max(row_counts)
+
+    inner_x1 = room_x1 + wall_thickness + pad_x
+    inner_x2 = room_x2 - wall_thickness - pad_x
+    inner_y1 = room_y1 + wall_thickness + pad_y
+    inner_y2 = room_y2 - wall_thickness - pad_y
+
+    x_spacing = (inner_x2 - inner_x1) / (max_cols - 1) if max_cols > 1 else 0
+    y_spacing = (inner_y2 - inner_y1) / (num_rows - 1) if num_rows > 1 else 0
+
+    outlet_positions = []
+    for row_idx, count in enumerate(row_counts):
+        cy = int(inner_y1 + row_idx * y_spacing)
+        if count == max_cols:
+            xs = [int(inner_x1 + i * x_spacing) for i in range(count)]
+        else:
+            offset = (max_cols - count) / 2 * x_spacing
+            xs = [int(inner_x1 + offset + i * x_spacing) for i in range(count)]
+        for cx in xs:
+            outlet_positions.append((cx, cy))
+            draw_outlet_symbol(cx, cy, size=20)
+
+    if outlet_positions:
+        tl = min(outlet_positions, key=lambda p: p[0] + p[1])
+        draw_leader(tl[0]-20, tl[1], room_x1 - 15, tl[1] - 70,
+                    ["Posto de rede", "2 tomadas / h=30cm"], side="left")
+        br = max(outlet_positions, key=lambda p: p[0] + p[1])
+        draw_leader(br[0]+20, br[1], room_x2 + 15, br[1] + 50,
+                    ["Posto de rede", "2 tomadas / h=30cm"], side="right")
+
+    if largura_m and comp_m:
+        dim_w = f"{largura_m:.2f} m"
+        dim_h = f"{comp_m:.2f} m"
+    else:
+        side_len = math.sqrt(area_m2)
+        dim_w = f"{side_len:.2f} m"
+        dim_h = f"{side_len:.2f} m"
+
+    draw_dimension_h(room_x1, room_x2, room_y1, dim_w, offset=55)
+    draw_dimension_v(room_y1, room_y2, room_x2, dim_h, offset=55)
+
+    tb_y = H - 100
+    draw.rectangle([room_x1, tb_y, room_x2, H - 10], fill="#F0E8E8", outline=wall_color, width=2)
+    title_text = f"{nivel} — {sala_name}" if nivel else sala_name
+    draw.text(((room_x1 + room_x2)//2, tb_y + 16), title_text,
+              font=font_title, fill=wall_color, anchor="mt")
+    draw.text(((room_x1 + room_x2)//2, tb_y + 52),
+              f"Area: {area_m2:.2f} m²   |   Tomadas: {tomadas}   |   Postos (2 tom.): {postos}   |   Escala: 1:50",
+              font=font_small, fill=label_color, anchor="mt")
+
+    lx = room_x2 + 60
+    ly = room_y1 + 140
+    draw.rectangle([lx, ly, lx + 220, ly + 78], fill="#FAF0F0", outline=outlet_color, width=1)
+    draw.text((lx + 10, ly + 6), "Legenda:", font=font_bold, fill=wall_color)
+    draw_outlet_symbol(lx + 28, ly + 52, size=14)
+    draw.text((lx + 52, ly + 42), "= Posto de 2 tomadas", font=font_tiny, fill=label_color)
+
+    img.save(filename)
+    print(f"Guardado: {filename}")
+
+
+# ── NÍVEL 1 — Terminal 3 (Departures) ────────────────────────────────────────
+# Excluídas: Sala 1 (hardware), Sala 3 (-), Sala 6 (-), Sala 11 (hardware), Sala 15 (hardware)
+nivel1 = [
+    # (nome, comp_m, larg_m, area_m2, tomadas)
+    ("Sala 2",  18.33, 13.33, 244.34, 51),
+    ("Sala 4",  18.33, 13.33, 244.34, 52),
+    ("Sala 5",  20.00, 13.33, 266.60, 57),
+    ("Sala 7",  18.33, 13.33, 244.34, 49),
+    ("Sala 8",  13.33, 13.33, 177.69, 36),
+    ("Sala 9",  16.67, 13.33, 222.21, 48),
+    ("Sala 10", 25.00, 13.33, 333.25, 71),
+    ("Sala 12", 30.00, 13.33, 399.90, 59),
+    ("Sala 13", 33.33, 13.33, 444.29, 87),
+    ("Sala 14", 21.70, 13.33, 289.26, 54),
+]
+
+for nome, comp, larg, area, tom in nivel1:
+    postos = math.ceil(tom / 2)
+    key = nome.lower().replace(" ", "_")
+    create_technical_plan(nome, area, tom, postos,
+                          f"/mnt/user-data/outputs/plantas/N1_{key}.png",
+                          nivel="Terminal 3 - Nível 1 (Departures)",
+                          largura_m=larg, comp_m=comp)
+
+
+# ── NÍVEL 2 — Terminal 3 (Arrivals) ──────────────────────────────────────────
+# Excluídas: Sala 1 (hardware), Sala 5 (-), Sala 6 (-), Sala 8 (-), Sala 9 (-), Sala 13 (hardware), Sala 20 (hardware)
+nivel2 = [
+    # (nome, comp_m, larg_m, area_m2, tomadas)
+    ("Sala 2",  25.00, 13.33, 333.25,  67),
+    ("Sala 3",  41.67, 13.33, 555.46, 111),
+    ("Sala 4",  25.00, 13.33, 333.25,  67),
+    ("Sala 7",  28.33, 13.33, 377.64,  76),
+    ("Sala 10", 43.33, 15.00, 649.95, 130),
+    ("Sala 11", 21.67, 16.67, 361.24,  72),
+    ("Sala 12", 20.00, 16.67, 333.40,  67),
+    ("Sala 14", 33.33, 15.00, 499.95, 100),
+    ("Sala 15", 40.00, 15.00, 600.00, 120),
+    ("Sala 16", 26.67, 15.00, 400.05,  80),
+    ("Sala 17", 23.33, 15.00, 349.95,  70),
+    ("Sala 18", 33.33, 15.00, 499.95, 100),
+    ("Sala 19", 23.33, 15.00, 349.95,  70),
+]
+
+for nome, comp, larg, area, tom in nivel2:
+    postos = math.ceil(tom / 2)
+    key = nome.lower().replace(" ", "_")
+    create_technical_plan(nome, area, tom, postos,
+                          f"/mnt/user-data/outputs/plantas/N2_{key}.png",
+                          nivel="Terminal 3 - Nível 2 (Arrivals)",
+                          largura_m=larg, comp_m=comp)
